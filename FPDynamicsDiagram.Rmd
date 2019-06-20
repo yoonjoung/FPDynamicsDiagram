@@ -66,7 +66,7 @@ knitr::include_graphics("LeakingBucketFP.png")
 
 But, cross sectional surveys, including the most well known Demographic and Health Surveys, have provided flow information __among women who ever used contraception in the five years before a survey__: i.e., continued using a method, switched to another method, or discontinued the use. [More about the survey's "calendar data" is here](https://www.dhsprogram.com/data/calendar-tutorial/). 
 
-It is often measured in 12-month "rates" (i.e., percent of episodes discontinued/switched within the time frame), and below table shows how the data are presented typically. In this example, overall (see the bottom row, "All methods"), contraceptive use continued in most episodes, but about a quarter of episodes discontinued (because of 7 reasons listed in columns). Six percent of the episodes (which is captured in the 'any reason discontinuation' column) were switched to another method use. Rate of discontinuation varies by method, ranging from 10% in implants to 34% in pills (of course excluding 0% discontinuation among female sterilization cases). 
+It is often measured in 12-month "rates" (i.e., percent of episodes discontinued/switched within the time frame), and below table shows how the data are presented typically. In this example, overall (see the bottom row, "All methods"), contraceptive use continued in most episodes, but about a quarter of episodes discontinued (because of 7 reasons listed in columns). Six percent of the episodes (which is captured in the 'any reason discontinuation' column) were switched to another method use. Rate of discontinuation varies by method, ranging from 10% in implants to 34% in pills (of course excluding 0% discontinuation among female sterilization cases). It is _highly_ recommended to read the footnote of this table very carefully. 
 
 __Figure 5. 12-month discontinuation data from Tanzania 2015-2016 DHS__ 
 ```{r, results='asis', fig.align="left", fig.width=16, out.width = "800px"}
@@ -202,14 +202,15 @@ dta<-dta %>% filter(group=="Contraceptive method")
 dta<-dta %>% mutate(
     order=0,
     order= ifelse(grouplabel == "Female sterilization",1, order),
-    order= ifelse(grouplabel == "Implants",2, order),
-    order= ifelse(grouplabel == "Injectables",3, order),
-    order= ifelse(grouplabel == "Pill",4, order),
-    order= ifelse(grouplabel == "Condom",5, order),
-    order= ifelse(grouplabel == "Other modern methods",6, order),
-    order= ifelse(grouplabel == "Periodic abstinence",7, order),
-    order= ifelse(grouplabel == "Withdrawal",8, order),
-    order= ifelse(grouplabel == "Other traditional methods",9, order))  
+    order= ifelse(grouplabel == "IUD",2, order),
+    order= ifelse(grouplabel == "Implants",3, order),
+    order= ifelse(grouplabel == "Injectables",4, order),
+    order= ifelse(grouplabel == "Pill",5, order),
+    order= ifelse(grouplabel == "Condom",6, order),
+    order= ifelse(grouplabel == "Other modern methods",7, order),
+    order= ifelse(grouplabel == "Periodic abstinence",8, order),
+    order= ifelse(grouplabel == "Withdrawal",9, order),
+    order= ifelse(grouplabel == "Other traditional methods",10, order)) 
 
 dta<-arrange(dta, order)
 obs<-nrow(dta)                       
@@ -241,15 +242,15 @@ dta<-dta %>%
         DiscontinuationInNeed=Discontinuation - DiscontinuationNotInNeed - DiscontinuationFailure,
         
         # Calculate number of episodes switched to each method 
-        FemaleSterilization=((denom*xswh/100)/8),
-        Implants=((denom*xswh/100)/8),
-        Injectables=((denom*xswh/100)/8),
-        Pills=((denom*xswh/100)/8),
-        Condom=((denom*xswh/100)/8),
-        OtherModern=((denom*xswh/100)/8),
-        Rhythm=((denom*xswh/100)/8),
-        Withdrawal=((denom*xswh/100)/8),
-        OtherTraditional=((denom*xswh/100)/8),
+        FemaleSterilization=((denom*xswh/100) / (nrow(dta)-1) ),
+        Implants=((denom*xswh/100) / (nrow(dta)-1) ),
+        Injectables=((denom*xswh/100) / (nrow(dta)-1) ),
+        Pills=((denom*xswh/100) / (nrow(dta)-1) ),
+        Condom=((denom*xswh/100) / (nrow(dta)-1) ),
+        OtherModern=((denom*xswh/100) / (nrow(dta)-1) ),
+        Rhythm=((denom*xswh/100) / (nrow(dta)-1) ),
+        Withdrawal=((denom*xswh/100) / (nrow(dta)-1) ),
+        OtherTraditional=((denom*xswh/100) / (nrow(dta)-1) ),
         
         # Calculate number of episodes continued
         continue=denom*(100-xany)/100,
@@ -407,6 +408,7 @@ __NOTE__
 - Height of each box on the left (i.e., source) is the sum of each row in the Matrix, Figure 6.  
 - Height of each box on the right (i.e., target) is the sum of each column in the Matrix, Figure 6.  
 - Right side looks longer only because of more number of categories, and total height is same between source and target.   
+- And a __caution__: once the number of episodes is lower than certain threshold, the flow/chord thickness is very difficult to guage the volumn. For example, the artificially assigned 0.0001 episodes from other modern to sterilization (if you remember from above) is as clear/prominent as other flows to sterilization. 
 
 #### 3.4. Chord diagram
 
