@@ -66,24 +66,24 @@ knitr::include_graphics("LeakingBucketFP.png")
 
 But, cross sectional surveys, including the most well known Demographic and Health Surveys, have provided flow information __among women who ever used contraception in the five years before a survey__: i.e., continued using a method, switched to another method, or discontinued the use. [More about the survey's "calendar data" is here](https://www.dhsprogram.com/data/calendar-tutorial/). 
 
-It is often measured in 12-month "rates" (i.e., percent of episodes discontinued/switched within the time frame), and below table shows how the data are presented typically. In this example, overall (see the bottom row, "All methods"), about a quarter of contraceptive use episodes discontinued (because of 7 reasons listed in columns) and 6% of the episodes were switched to another method. Contraceptive use continued 12 months or longer in the rest, about 70%. Rate of discontinuation varies by method, ranging from 10% in implants to 34% in pills. 
+It is often measured in 12-month "rates" (i.e., percent of episodes discontinued/switched within the time frame), and below table shows how the data are presented typically. In this example, overall (see the bottom row, "All methods"), contraceptive use continued in most episodes, but about a quarter of episodes discontinued (because of 7 reasons listed in columns). Six percent of the episodes (which is captured in the 'any reason discontinuation' column) were switched to another method use. Rate of discontinuation varies by method, ranging from 10% in implants to 34% in pills (of course excluding 0% discontinuation among female sterilization cases). 
 
 __Figure 5. 12-month discontinuation data from Tanzania 2015-2016 DHS__ 
-```{r, results='asis', fig.align="left", fig.width=16, out.width = "500px"}
+```{r, results='asis', fig.align="left", fig.width=16, out.width = "800px"}
 knitr::include_graphics("TZ2015DHS_Table7.9.png")
 ```
 (Source: Tanzania DHS 2015-2016)
 
 Given its dynamic nature, a flow diagram would be a good visualization approach. Next section presents reproducible R code to generate the two diagrams using the above data from Tanzania 2015-2016 DHS. 
 
-__But, wait!__ There is missing information to create the diagrams: detailed switching information - for example, among those pill use episodes that switched to other methods (second last column), percent distribution by new switched method. That information is actually available in the "calendar data" but typically not tabulated routinely. Since my purpose here is to demonstrate and compare visualization approaches, no individual-level data are analyzed to calculated that information (which itself alone is a significant and complex data analysis activity!). Rather, the tabulated data are used with a simple, unlikely assumption: the new switched method is randomly chosen (clearly not the case in the real world), and, thus, switching to each method has same probabilities. 
+__But, wait!__ There is missing information to create the diagrams: detailed switching information - for example, among those pill use episodes that switched to other methods (second last column), percent distribution by new switched method. That information is actually available in the "calendar data" but typically not tabulated routinely. Since my purpose here is to demonstrate and compare visualization approaches, no individual-level data are analyzed to calculated that information (which itself alone is a significant and complex data analysis activity!). Rather, the tabulated data are used with a simple, though unlikely assumption: the new switched method is randomly chosen (clearly not the case in the real world), and, thus, switching to each method has same probabilities. 
 
 ### 3. Diagrams to vizualize family planning use and demand dynamics
 
 #### 3.1. Get the discontinuation and switching tabulation data via DHS API 
-Data in the above table can be called via DHS API. See here how the data look like ([in html format](http://api.dhsprogram.com/rest/dhs/data?f=html&indicatorIds=FP_DISR_W_PRG,FP_DISR_W_DES,FP_DISR_W_FRT,FP_DISR_W_SID,FP_DISR_W_WME,FP_DISR_W_MET,FP_DISR_W_OTH,FP_DISR_W_ANY,FP_DISR_W_SWH,FP_DISR_W_NUM&surveyids=TZ2015DHS&breakdown=all&perpage=1000)). To learn more about how to call DHS API data, see this "[How to get DHS API data: introduction](http://rpubs.com/YJ_Choi/HowTo_DHSAPI_Introduction)". To see R code for data access and wrangling in this section, see the markdown file in [GitHub](url).
+Data in the above table can be called via DHS API. See here how the data look like ([in html format](http://api.dhsprogram.com/rest/dhs/data?f=html&indicatorIds=FP_DISR_W_PRG,FP_DISR_W_DES,FP_DISR_W_FRT,FP_DISR_W_SID,FP_DISR_W_WME,FP_DISR_W_MET,FP_DISR_W_OTH,FP_DISR_W_ANY,FP_DISR_W_SWH,FP_DISR_W_NUM&surveyids=TZ2015DHS&breakdown=all&perpage=1000)). To learn more about how to call DHS API data, see this "[How to get DHS API data: introduction](http://rpubs.com/YJ_Choi/HowTo_DHSAPI_Introduction)". To see R code for data access and wrangling in this section, see the markdown file in [GitHub](https://github.com/yoonjoung/FPDynamicsDiagram).
 
-```{r getdtaTRUE}
+```{r getdtaTRUE, cache=TRUE}
 # Get required functions 
 library(jsonlite) 
 library(data.table)
@@ -162,6 +162,8 @@ FP_DISR_W_NUM<- dta %>% rename(FP_DISR_W_NUM=Value)
 ```
 
 ```{r merge}
+library(dplyr)
+
 # Merge 
 idvars<-c("CountryName", "SurveyId", "CharacteristicCategory", "CharacteristicLabel")
 dtaapi<-FP_DISR_W_PRG %>%
@@ -217,13 +219,15 @@ One difference between the published table and API data: the "Other" row in the 
 
 #### 3.2. Complete the flow matrix 
 
-Now the final analysis data should be 9 (methods) by 11 (9 methods + 2 discontinuation categories) data frame.   
+Now the final analysis data should be 9 (methods) by 12 (9 methods + 3 discontinuation categories) data frame.   
+
 __Important footnote__:  
-1. It has the number of episodes starting from one method (in each row) ending in one of the 11 columns by the end of the 12-month period. Sum of numbers in each row adds up to the total episodes by method.   
-2. Unlike the table above, in this analysis and visuzlization, discontinuation refers to _not using any methods_ and thus excludes switching episodes.   
-3. As mentioned, a simple assumption is made that new switched method is selected randomly. 
-4. Discontinuation is spilit into two groups: Discontinuation while _NOT in need_ vs. discontinuation while _in need_. "Not in need" includes two reasons: desire to become pregnant, and other fertility related reasons. It is assumed that all who discontinued because they wanted more effective methods (5th column in the above table) indeed switched to another method.   
-To see R code for further data processing, see the markdown file in [GitHub](url). 
+1. It has the number of episodes starting from one method (in each row) ending in one of the 12 columns by the end of the 12-month period. Sum of numbers in each row adds up to the total episodes by method.   
+2. Unlike the table above, in this analysis and visualization, discontinuation refers to _not using any methods_ and thus excludes switching episodes.   
+3. As mentioned, a simple assumption is made that new switched method is selected randomly.   
+4. Discontinuation is split into three groups: Discontinuation while _NOT in need_ vs. discontinuation while _in need_ vs. discontinuation due to _method failure_. "Not in need" includes two reasons: desire to become pregnant, and other fertility related reasons. It is assumed, for this exercise, that all who discontinued because they wanted more effective methods (5th column in the above table) indeed switched to another method.   
+
+To see R code for further data processing, see the markdown file in [GitHub](https://github.com/yoonjoung/FPDynamicsDiagram). 
 
 ```{r moretidying}
 # Tidy up
@@ -233,7 +237,8 @@ dta<-dta %>%
         # Calculate number of episodes disoncinuted 
         Discontinuation=denom*(xany-xswh)/100,
         DiscontinuationNotInNeed=denom*(xdes+xfrt)/100,
-        DiscontinuationInNeed=Discontinuation - DiscontinuationNotInNeed,
+        DiscontinuationFailure=denom*(xprg)/100,
+        DiscontinuationInNeed=Discontinuation - DiscontinuationNotInNeed - DiscontinuationFailure,
         
         # Calculate number of episodes switched to each method 
         FemaleSterilization=((denom*xswh/100)/8),
@@ -268,7 +273,7 @@ dta<-dta %>%
                        continue, OtherTraditional),
         
         # check if test==denom
-        test=DiscontinuationNotInNeed+DiscontinuationInNeed+FemaleSterilization+Implants+Injectables+Pills+Condom+OtherModern+Rhythm+Withdrawal+OtherTraditional,
+        test=DiscontinuationNotInNeed+DiscontinuationInNeed+DiscontinuationFailure+FemaleSterilization+Implants+Injectables+Pills+Condom+OtherModern+Rhythm+Withdrawal+OtherTraditional,
         confirm=round(test-denom, 1)
         ) 
 
@@ -282,22 +287,44 @@ matrix<-dta %>%
            FemaleSterilization, Implants, Injectables, 
            Pills, Condom, OtherModern, 
            Rhythm, Withdrawal, OtherTraditional,
-           DiscontinuationInNeed, DiscontinuationNotInNeed) %>%
+           DiscontinuationFailure, DiscontinuationInNeed,
+           DiscontinuationNotInNeed) %>%
     mutate_if(is.numeric, round, 1)
 
 # label rows and check against the grouplabel
 rownames(matrix) <- c("FemaleSterilization","Implants","Injectables","Pills","Condom","OtherModern","Rhythm","Withdrawal","OtherTraditional")
 
-# Finally 9 by 11 matrix 
+# Finally 9 by 12 matrix 
 matrix<-matrix %>% select(-grouplabel) 
 View(matrix)
 ```
 
-The analysis data frame, 9 by 11 matrix, should look like this, with most number of episodes by method end up being in the same method continuation cells (i.e., diagonal cells), followed by the discontinuation cells (i.e., the last two columns).  
+The analysis data frame, 9 by 12 matrix, should look like this, with most number of episodes by method end up being in the same method continuation cells (i.e., diagonal cells), followed by the discontinuation cells (i.e., the last two columns). Rows represent __source__ and columns are __target__ (i.e., the number of episodes move from a source to a target in the diagram).  
 
 __Figure 6. Matrix of contraceptive use dynamics__ 
 ```{r, results='asis', fig.align="left", fig.width=16, out.width = "700px"}
 knitr::include_graphics("Matrix_WithReasons.png")
+```
+
+__Argh, but, one more!__ When the first column (i.e., first target) has a cell with "0" (like 6th row in the figure above), the source for that cell (like "Other Modern" in the figure) is pushed back in terms of the source order in the diagram. Since the rows are in the order of effectiveness, we would like to keep that order. One not so smart way to fix this problem (until I find a smart solution) is to artificially assign a small number in that case. Here, 0.0001 is used, although no episode of _Other Modern_ moved to _Female Sterilization_. 
+
+```{r readyMatrixMore}
+##### Recode sterilization 0=0.0001
+# It appears that if any cell is 0 in the first column, 
+# it loses it's order in the left side of the sankey diagram. 
+# The order on the LT side is determined by the first target on the RT sitde.
+# Argh! 
+# SO, until I figure out how to fix that issue: a dumb but temporary solution.
+# Thus if there's any 0 in the first column cells, assign a small fake number. 
+matrix<-matrix %>% mutate(
+        FemaleSterilization= ifelse(FemaleSterilization == 0,
+                                    0.0001, 
+                                    FemaleSterilization))
+head(matrix[,1], 10)
+
+# Again, label rows and check against the grouplabel
+rownames(matrix) <- c("FemaleSterilization","Implants","Injectables","Pills","Condom","OtherModern","Rhythm","Withdrawal","OtherTraditional")
+View(matrix)
 ```
 
 #### 3.3. Sankey diagram 
@@ -307,10 +334,9 @@ Let's start with a Sankey diagram, which I think is more appropriate for this to
 ```{r Sankey, echo=TRUE, results="asis", fig.align="left", fig.width=8}
 # Libraries
 library(tidyverse)
-library(viridis)
 #library(patchwork)
-library(hrbrthemes)
-library(circlize)
+#library(hrbrthemes)
+#library(circlize)
 library(networkD3)
 
 # Define the "data" for the digram is "matrix" from above
@@ -334,24 +360,53 @@ nodes <- data.frame(name=c(as.character(data_long$source),
 data_long$IDsource=match(data_long$source, nodes$name)-1 
 data_long$IDtarget=match(data_long$target, nodes$name)-1
 
-# Prepare colour scale
-#ColourScal ='d3.scaleOrdinal() .range(["#FDE725FF","#B4DE2CFF","#6DCD59FF","#35B779FF","#1F9E89FF","#26828EFF","#31688EFF","#3E4A89FF","#482878FF","#440154FF"])'
-ColourScal ='d3.scaleOrdinal() .range(["#084594","#2171b5","#4292c6","#6baed6","#9ecae1","#c6dbef","#238b45","#41ab5d","#74c476","#fc4e2a","#ffffb2"])'
+# Prepare colour scale (7-class Blues, 7-class Greens, 7-class YlOrRd)
+ColourScal ='d3.scaleOrdinal() .range(["#084594","#2171b5","#4292c6","#6baed6","#9ecae1","#c6dbef","#238b45","#41ab5d","#74c476","#b10026", "#fc4e2a","#ffffb2"])'
 
 # Make the Network
+##### set "iterations=0" to avoid automatic assignment of the box order
 sankeyNetwork(Links = data_long, Nodes = nodes,
             Source = "IDsource", Target = "IDtarget",
             Value = "value", NodeID = "name", 
             sinksRight=FALSE, colourScale=ColourScal, 
-            nodeWidth=40, fontSize=13, nodePadding=20
+            nodeWidth=40, fontSize=13, nodePadding=20,
+            iterations=0
             )
 ```
 
-__Argh, color and order of boxes should be fixed according to the method effectiveness hyerarchy: blue modern methods & green traditional methods__. Also, how can I put the discontinuation to the bottom right?? 
+```{r summary}
+total<-colSums(matrix)
+sumdisfailure<-total[10]
+sumdisinneed<-total[11]
+sumdisnotinneed<-total[12]
+sumdis<-sumdisfailure+sumdisinneed+sumdisnotinneed
+sum<-sum(total)
 
-Nevertheless, the diagram shows how contraceptive use episodes by each method on the left changed (or unchanged) 12-months after starting the methods. Proportionally, there is higher discontinuation among short-acting methods, which makes sense. 
+dis<-round(100*sumdis/sum, 0)
+disnotinneed<-round(100*sumdisnotinneed/sumdis, 0)
+disinneed<-round(100*sumdisinneed/sumdis, 0)
+disfailure<-round(100*sumdisfailure/sumdis, 0)
 
-Individual switching flows are, again, calculated with a crude assumption (i.e., random selection of the next/other method) for the purpose of this exercise. But, given relatively low level of switching (in the example of Tanzania, at least), this is what a typical Sankey diagram would look like for contraceptive discontinuation and switching.    
+disinneedtotal<-round(100*sumdisinneed/sum, 0)
+disfailuretotal<-round(100*sumdisfailure/sum, 0)
+```
+
+__Great, the diagram shows how contraceptive use episodes by each method on the left changed (or unchanged) 12-months after starting the methods, based on the calendar data in Tanzania DHS 2015-2016.__ Overall, most episodes continued for 12 months since beginning of the use. But:   
+
+_Discontinuation_:    
+- About `r dis`% of episodes discontinued.  
+- Of those discontinued episodes, about `r disnotinneed`% was because there was no more need for family planning (yellow).  
+- The rest, however, were discontinued __while there was need for family planning__ (__orange__: `r disinneed`% of total discontinuation, or `r disinneedtotal`% of total use episodes) or __because of method failure__ (__red__: `r disfailure`% of total discontinuation, or `r disfailuretotal`% of total use episodes).   
+- By individual method, Proportionally, there is higher discontinuation among short-acting methods, which makes sense. 
+
+_Switching_:   
+- There are not many switching cases.   
+- Again, individual switching flows are calculated with a crude assumption (i.e., random selection of the next/other method) for the purpose of this exercise. But, given relatively low level of switching (in the example of Tanzania, at least), this is what a typical Sankey diagram would look like for contraceptive discontinuation and switching.    
+
+__NOTE__   
+- Height of each box on the left (i.e., source) is the sum of each row in the Matrix, Figure 6.  
+- Height of each box on the right (i.e., target) is the sum of each column in the Matrix, Figure 6.  
+- Right side looks longer only because of more number of categories, and total height is same between source and target.   
 
 #### 3.4. Chord diagram
 
@@ -360,7 +415,7 @@ Individual switching flows are, again, calculated with a crude assumption (i.e.,
 library(tidyverse)
 library(viridis)
 #library(patchwork)
-#library(hrbrthemes)
+library(hrbrthemes)
 library(circlize)
 #library(chorddiag)  #devtools::install_github("mattflor/chorddiag")
 
@@ -382,7 +437,7 @@ par(mar = rep(0, 4))
 # color palette
 #mycolor <- viridis(10, alpha = 1, begin = 0, end = 1, option = "D")
 #mycolor <- mycolor[sample(1:10)]
-mycolor <-c("#084594","#2171b5","#4292c6","#6baed6","#9ecae1","#c6dbef","#238b45","#41ab5d","#74c476","#fc4e2a","#ffffb2")
+mycolor <-c("#084594","#2171b5","#4292c6","#6baed6","#9ecae1","#c6dbef","#238b45","#41ab5d","#74c476","#b10026", "#fc4e2a","#ffffb2")
 
 # Base plot
 chordDiagram(
@@ -428,4 +483,4 @@ circos.trackPlotRegion(
     )
 ```
 
-Hmm, the chord diagram seems pretty ineffective in my opinion. Not even motivated to fix the esthetic problems such as data label. 
+Hmm, the chord diagram seems pretty ineffective in my opinion. Not even motivated to fix the aesthetic problems. 
